@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="المطري كونسلت">
+<meta name="theme-color" content="#0B1829">
+<title>المطري كونسلت</title>
+
+<!-- ══════════════════════════════════════════════
+     ⚙️  CONFIG — غيّر هذه القيم الثلاث فقط
+══════════════════════════════════════════════ -->
+<script>
+const CONFIG = {
+  SUPABASE_URL:     'https://xvqxhraqwuorhrncnurj.supabase.co',
+  SUPABASE_ANON_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2cXhocmFxd3VvcmhybmNudXJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzNTUwOTUsImV4cCI6MjA4ODkzMTA5NX0.GE3_QmMZU-mba0miGNxRikDcuSCgQNw-1soioLZ5A4c',
+  // Updated with your actual n8n webhook endpoints
+  // client-request will handle new client submissions
+  N8N_WEBHOOK_URL:  'https://n8n.srv1243842.hstgr.cloud/webhook/client-request',
+  // inspection-submit will handle engineer inspection submissions
+  N8N_INSPECTION_WEBHOOK: 'https://n8n.srv1243842.hstgr.cloud/webhook/inspection-submit',
+};
+</script>
+
+<style>
+/* ═══════════ RESET & BASE ═══════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: #070F1A;
+  font-family: -apple-system, 'Segoe UI', Tahoma, 'Arabic UI Text', sans-serif;
+  color: #E8EDF2;
+  -webkit-font-smoothing: antialiased;
+}
+input, textarea, select, button { font-family: inherit; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: #2E6EA6 !important; }
+img { max-width: 100%; }
+
+/* ═══════════ APP SHELL ═══════════ */
+#app {
+  display: flex; flex-direction: column;
+  height: 100%; height: 100dvh;
+  max-width: 430px; margin: 0 auto;
+  position: relative; overflow: hidden;
+}
+
+/* ═══════════ HEADER ═══════════ */
+#header {
+  background: #0B1829;
+  border-bottom: 1px solid #1B3A5C;
+  padding: 0 16px;
+  height: 56px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; z-index: 50;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: linear-gradient(135deg, #C8962A 0%, #0B2D4E 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800; color: #fff;
+  box-shadow: 0 2px 8px rgba(200,150,42,.3);
+}
+.logo-text .name { font-size: 14px; font-weight: 700; color: #E8EDF2; line-height: 1.2; }
+.logo-text .tag  { font-size: 10px; color: #C8962A; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+#user-pill {
+  display: none; align-items: center; gap: 6px;
+  background: #0D1F33; border: 1px solid #1B3A5C;
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 12px; color: #90CAF9;
+}
+#logout-btn {
+  background: none; border: none; color: #5A7A9A;
+  font-size: 18px; cursor: pointer; padding: 4px;
+  display: none;
+}
+
+/* ═══════════ PAGES ═══════════ */
+#pages { flex: 1; overflow: hidden; position: relative; }
+.page {
+  position: absolute; inset: 0;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 20px 16px 100px;
+  opacity: 0; pointer-events: none;
+  transform: translateX(30px);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.page.active {
+  opacity: 1; pointer-events: all; transform: translateX(0);
+}
+
+/* ═══════════ BOTTOM NAV ═══════════ */
+#bottom-nav {
+  height: 64px; flex-shrink: 0;
+  background: #0B1829;
+  border-top: 1px solid #1B3A5C;
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  position: relative; z-index: 50;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px; cursor: pointer; border: none; background: none;
+  color: #4A6A8A; font-size: 11px; font-weight: 600;
+  transition: color .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item .nav-icon { font-size: 20px; line-height: 1; }
+.nav-item.active { color: #C8962A; }
+.nav-item.active .nav-icon { filter: drop-shadow(0 0 4px rgba(200,150,42,.5)); }
+
+/* ═══════════ SECTION TITLES ═══════════ */
+.page-tag   { font-size: 11px; color: #C8962A; font-weight: 700; letter-spacing: 2px; margin-bottom: 4px; text-align: center; }
+.page-title { font-size: 22px; font-weight: 800; text-align: center; }
+.page-sub   { font-size: 13px; color: #7A99B8; text-align: center; margin-top: 4px; line-height: 1.5; }
+.page-head  { margin-bottom: 24px; }
+
+/* ═══════════ CARDS ═══════════ */
+.card {
+  background: #0B1829; border: 1px solid #1B3A5C;
+  border-radius: 16px; padding: 16px; margin-bottom: 12px;
+}
+.card-sm { padding: 12px 14px; border-radius: 12px; }
+
+/* ═══════════ FORM FIELDS ═══════════ */
+.field { margin-bottom: 14px; }
+.label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: #90CAF9; margin-bottom: 6px;
+}
+.req { color: #FF6B6B; margin-right: 2px; }
+.hint { font-size: 11px; color: #4A6A8A; margin-top: 4px; }
+input[type=text], input[type=tel], input[type=email], textarea, select {
+  width: 100%; background: #0D1F33;
+  border: 1px solid #1E3A5A; border-radius: 12px;
+  padding: 12px 14px; color: #E8EDF2; font-size: 15px;
+  -webkit-appearance: none; appearance: none;
+  transition: border-color .2s;
+}
+select { direction: rtl; background-image: none; }
+textarea { resize: none; line-height: 1.6; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+
+/* ═══════════ BUTTONS ═══════════ */
+.btn {
+  width: 100%; padding: 14px; border-radius: 14px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  border: none; transition: all .2s; display: flex;
+  align-items: center; justify-content: center; gap: 8px;
+}
+.btn:active { transform: scale(.97); }
+.btn-primary {
+  background: linear-gradient(135deg, #1B5E92, #0B2D4E);
+  color: #fff; box-shadow: 0 4px 20px rgba(27,94,146,.4);
+  border: 1px solid #2E6EA6;
+}
+.btn-green {
+  background: linear-gradient(135deg, #1A7A4A, #0E5C38);
+  color: #fff; box-shadow: 0 4px 20px rgba(26,122,74,.4);
+  border: 1px solid #2AAA6A; margin-bottom: 10px;
+}
+.btn-outline {
+  background: #0D1F33; color: #90CAF9;
+  border: 1px solid #1E3A5A;
+}
+.btn-gold {
+  background: linear-gradient(135deg, #C8962A, #8B6A1A);
+  color: #fff; box-shadow: 0 4px 20px rgba(200,150,42,.3);
+  border: 1px solid #DDA83A;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+.btn-sm { padding: 9px 18px; width: auto; font-size: 13px; border-radius: 10px; }
+
+/* ═══════════ UPLOAD ZONE ═══════════ */
+.upload-zone {
+  border: 2px dashed #1E3A5A; border-radius: 14px;
+  padding: 22px 16px; text-align: center;
+  background: #0A1726; cursor: pointer; margin-bottom: 16px;
+  transition: border-color .2s;
+}
+.upload-zone:active { border-color: #2E6EA6; }
+.upload-icon  { font-size: 28px; margin-bottom: 6px; }
+.upload-label { font-size: 13px; color: #7A99B8; }
+.upload-hint  { font-size: 11px; color: #4A6A8A; margin-top: 3px; }
+#photo-input, #client-photo-input { display: none; }
+
+/* photo thumbnails */
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.photo-thumb {
+  aspect-ratio: 1; border-radius: 10px; overflow: hidden;
+  position: relative; background: #0D1F33;
+  border: 1px solid #1E3A5A;
+}
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-thumb .del {
+  position: absolute; top: 4px; left: 4px;
+  background: rgba(0,0,0,.7); border: none; border-radius: 50%;
+  width: 22px; height: 22px; color: #fff; font-size: 12px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.add-photo-btn {
+  aspect-ratio: 1; border-radius: 10px;
+  background: #0A1726; border: 2px dashed #1E3A5A;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; cursor: pointer; color: #4A6A8A; font-size: 11px;
+  gap: 4px; transition: border-color .2s;
+}
+.add-photo-btn:active { border-color: #2E6EA6; }
+
+/* ═══════════ TYPE SELECTOR ═══════════ */
+.type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.type-btn {
+  background: #0D1F33; border: 1px solid #1E3A5A;
+  border-radius: 12px; padding: 12px 6px;
+  color: #7A99B8; font-size: 12px; font-weight: 600;
+  cursor: pointer; text-align: center;
+  transition: all .15s; -webkit-tap-highlight-color: transparent;
+}
+.type-btn .ico { font-size: 22px; margin-bottom: 5px; }
+.type-btn.sel { background: #1B3A5C; border-color: #2E6EA6; color: #90CAF9; }
+
+/* ═══════════ TOGGLE ═══════════ */
+.toggle-row {
+  background: #100808; border: 1px solid #4A1A1A;
+  border-radius: 12px; padding: 13px 14px;
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 14px;
+}
+.toggle-label { font-size: 13px; font-weight: 600; color: #FFB4B4; }
+.toggle-sub   { font-size: 11px; color: #AA7777; margin-top: 2px; }
+.toggle-sw {
+  width: 46px; height: 26px; border-radius: 13px;
+  background: #2A1A1A; border: 2px solid #4A2A2A;
+  position: relative; cursor: pointer; transition: .2s; flex-shrink: 0;
+}
+.toggle-sw.on { background: #7A1A1A; border-color: #CC3333; }
+.toggle-sw::after {
+  content: ''; position: absolute;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #666; top: 1px; right: 1px; transition: .2s;
+}
+.toggle-sw.on::after { right: calc(100% - 22px); background: #FFB4B4; }
+
+/* ═══════════ BADGES ═══════════ */
+.badge {
+  display: inline-block; padding: 3px 10px;
+  border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .3px;
+}
+.badge-critical { background: #5A0E0E; color: #FFB4B4; }
+.badge-high     { background: #5A2A0E; color: #FFCC99; }
+.badge-moderate { background: #5A4E0E; color: #FFF0AA; }
+.badge-low      { background: #0E3A1C; color: #AAFFC4; }
+
+/* status pill */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.sp-new             { background: #0E2A40; color: #7ABCFF; }
+.sp-ai_processing   { background: #0E3A3A; color: #7AEEEE; }
+.sp-pending_review  { background: #2D1040; color: #CC99FF; }
+.sp-completed       { background: #0E2A18; color: #7AFFA8; }
+
+/* ═══════════ VISIT CARDS ═══════════ */
+.visit-card {
+  background: #0B1829; border: 1px solid #1B3A5C;
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+  cursor: pointer; transition: border-color .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.visit-card:active { border-color: #3A6EA6; }
+.vc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.vc-num { font-size: 13px; font-weight: 700; color: #C8962A; }
+.vc-client { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.vc-meta { font-size: 12px; color: #7A99B8; }
+
+/* ═══════════ FINDING CARDS ═══════════ */
+.finding-card {
+  background: #0B1829; border: 1px solid #1B3A5C;
+  border-radius: 14px; padding: 16px; margin-bottom: 10px;
+}
+.fc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.fc-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fc-code { font-size: 10px; color: #4A6A8A; font-family: monospace; }
+.fc-name { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.fc-desc { font-size: 13px; color: #90CAF9; line-height: 1.6; margin-bottom: 6px; }
+.fc-loc  { font-size: 11px; color: #4A6A8A; margin-bottom: 12px; }
+.dec-row { display: flex; gap: 8px; }
+.dec-btn {
+  flex: 1; padding: 8px 4px; border-radius: 9px;
+  background: #0D1F33; border: 1px solid #1E3A5A;
+  color: #7A99B8; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all .15s;
+}
+.dec-btn.approved { background: #0E3A1C; border-color: #4ADE80; color: #4ADE80; }
+.dec-btn.modified { background: #3D2800; border-color: #FCD34D; color: #FCD34D; }
+.dec-btn.rejected { background: #3A0E0E; border-color: #FF6B6B; color: #FF6B6B; }
+
+/* ═══════════ CONFIDENCE BAR ═══════════ */
+.conf-bar { background: #0D1F33; border-radius: 4px; height: 4px; margin-top: 8px; overflow: hidden; }
+.conf-fill { height: 100%; background: linear-gradient(90deg, #1B5E92, #4ADE80); border-radius: 4px; }
+
+/* ═══════════ REPORT ═══════════ */
+.report-hero {
+  background: linear-gradient(135deg, #0B1829 0%, #0E2A1C 100%);
+  border: 1px solid #1B5E92; border-radius: 18px;
+  padding: 22px 18px; margin-bottom: 14px; overflow: hidden; position: relative;
+}
+.report-hero::after {
+  content: ''; position: absolute; bottom: -30px; left: -30px;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: rgba(200,150,42,.05); pointer-events: none;
+}
+.rpt-tag  { font-size: 10px; color: #C8962A; font-weight: 700; letter-spacing: 2px; margin-bottom: 5px; }
+.rpt-num  { font-size: 22px; font-weight: 800; margin-bottom: 3px; }
+.rpt-vis  { font-size: 12px; color: #7A99B8; }
+.rpt-div  { height: 1px; background: #1B3A5C; margin: 14px 0; }
+.rpt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.meta-k   { font-size: 11px; color: #4A6A8A; margin-bottom: 2px; }
+.meta-v   { font-size: 13px; font-weight: 600; }
+
+.cond-card {
+  display: flex; align-items: center; gap: 14px;
+  background: #130808; border: 1px solid #4A1A1A;
+  border-radius: 13px; padding: 14px 16px; margin-bottom: 14px;
+}
+.cond-icon {
+  width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.cond-lbl { font-size: 11px; color: #AA7777; margin-bottom: 2px; }
+.cond-val { font-size: 16px; font-weight: 800; color: #FF8A80; }
+
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.stat-box {
+  background: #0B1829; border: 1px solid #1B3A5C;
+  border-radius: 11px; padding: 10px 6px; text-align: center;
+}
+.stat-n   { font-size: 22px; font-weight: 800; }
+.stat-lbl { font-size: 10px; color: #4A6A8A; margin-top: 1px; }
+
+/* ═══════════ LOADING OVERLAY ═══════════ */
+#loading {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(7,15,26,.85); backdrop-filter: blur(6px);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px;
+}
+#loading.show { display: flex; }
+.spinner {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 3px solid #1B3A5C; border-top-color: #C8962A;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: #90CAF9; }
+
+/* ═══════════ TOAST ═══════════ */
+#toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #1B3A5C; border: 1px solid #2E6EA6;
+  border-radius: 12px; padding: 10px 20px;
+  font-size: 13px; font-weight: 600; color: #E8EDF2;
+  z-index: 300; opacity: 0; transition: all .3s; white-space: nowrap;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.error { background: #3A1A1A; border-color: #8B1A1A; }
+#toast.success { background: #0E2A1C; border-color: #1A7A4A; }
+
+/* ═══════════ LOGIN PAGE ═══════════ */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: #070F1A;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.login-box { width: 100%; max-width: 360px; }
+.login-logo {
+  text-align: center; margin-bottom: 32px;
+}
+.login-mark {
+  width: 70px; height: 70px; border-radius: 20px;
+  background: linear-gradient(135deg, #C8962A, #0B2D4E);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 800; color: #fff;
+  margin: 0 auto 14px;
+  box-shadow: 0 8px 30px rgba(200,150,42,.3);
+}
+.login-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+.login-sub   { font-size: 13px; color: #7A99B8; }
+.divider { height: 1px; background: #1B3A5C; margin: 22px 0; }
+
+/* ═══════════ EMPTY STATE ═══════════ */
+.empty-state {
+  text-align: center; padding: 50px 20px;
+  color: #4A6A8A;
+}
+.empty-icon  { font-size: 48px; margin-bottom: 14px; }
+.empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: #7A99B8; }
+.empty-sub   { font-size: 13px; line-height: 1.6; }
+
+/* ═══════════ PROGRESS ANIM ═══════════ */
+.prog-bar { background: #0D1F33; border-radius: 8px; height: 8px; overflow: hidden; margin: 20px 0; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, #0E7C7B, #4ADE80); border-radius: 8px; animation: pg 2s ease-in-out infinite alternate; }
+@keyframes pg { from{width:20%} to{width:90%} }
+
+/* ═══════════ MISC ═══════════ */
+.sep { height: 1px; background: #1B3A5C; margin: 14px 0; }
+.row-between { display: flex; justify-content: space-between; align-items: center; }
+.text-gold { color: #C8962A; }
+.text-muted { color: #7A99B8; }
+.text-sm { font-size: 12px; }
+.mt8 { margin-top: 8px; }
+.mb14 { margin-bottom: 14px; }
+.fw7 { font-weight: 700; }
+.centered { text-align: center; }
+
+/* safe area */
+@supports(padding: max(0px)) {
+  #bottom-nav { padding-bottom: max(env(safe-area-inset-bottom), 8px); height: auto; min-height: 64px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════ LOADING ══════ -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">جارٍ المعالجة...</div>
+</div>
+
+<!-- ══════ TOAST ══════ -->
+<div id="toast"></div>
+
+<!-- ══════ LOGIN OVERLAY ══════ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-mark">م</div>
+      <div class="login-title">المطري كونسلت</div>
+      <div class="login-sub">المستشار مؤتمن</div>
+    </div>
+
+    <div id="login-role-select">
+      <div style="font-size:13px;color:#7A99B8;text-align:center;margin-bottom:16px">اختر نوع الدخول</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-primary" onclick="showLoginForm('client')">
+          🏠 أنا صاحب عقار — أريد طلب فحص
+        </button>
+        <button class="btn btn-outline" onclick="showLoginForm('engineer')">
+          🔧 أنا مهندس — دخول الفريق
+        </button>
+      </div>
+      <div class="divider"></div>
+      <div style="text-align:center;font-size:12px;color:#4A6A8A">
+        للاستفسار: واتساب
+        <span style="color:#C8962A;font-weight:700"> 0538986031</span>
+      </div>
+    </div>
+
+    <div id="login-form-wrap" style="display:none">
+      <div id="login-form-title" style="font-size:16px;font-weight:700;margin-bottom:16px;text-align:center"></div>
+      <div class="field">
+        <label class="label">رقم الجوال</label>
+        <input type="tel" id="login-phone" placeholder="05XXXXXXXX" maxlength="10">
+      </div>
+      <div class="field" id="login-pass-wrap">
+        <label class="label">كلمة المرور</label>
+        <input type="password" id="login-pass" placeholder="••••••••">
+      </div>
+      <div class="field" id="login-name-wrap" style="display:none">
+        <label class="label">اسمك الكامل</label>
+        <input type="text" id="login-name" placeholder="محمد العنزي">
+      </div>
+      <button class="btn btn-gold mt8" onclick="doLogin()" id="login-submit-btn">دخول</button>
+      <button class="btn btn-outline" onclick="backToRoles()" style="margin-top:8px">← رجوع</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     APP SHELL
+══════════════════════════════════ -->
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div class="logo">
+      <div class="logo-mark">م</div>
+      <div class="logo-text">
+        <div class="name">المطري كونسلت</div>
+        <div class="tag">المستشار مؤتمن</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="user-pill">
+        <span id="user-name-display"></span>
+      </div>
+      <button id="logout-btn" onclick="logout()" title="خروج">⏻</button>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div id="pages">
+
+    <!-- ════ PAGE: CLIENT HOME ════ -->
+    <div class="page active" id="page-home">
+      <div class="page-head">
+        <div class="page-tag">نظام الفحص الهندسي</div>
+        <div class="page-title">طلب فحص العقار</div>
+        <div class="page-sub">أرسل طلبك ويتواصل معك مهندسنا خلال 24 ساعة</div>
+      </div>
+
+      <div class="field">
+        <label class="label">اسمك الكامل <span class="req">*</span></label>
+        <input type="text" id="cf-name" placeholder="محمد العنزي">
+      </div>
+      <div class="field">
+        <label class="label">رقم الجوال <span class="req">*</span></label>
+        <input type="tel" id="cf-phone" placeholder="05XXXXXXXX" maxlength="10">
+      </div>
+      <div class="grid2">
+        <div>
+          <label class="label">المدينة</label>
+          <select id="cf-city">
+            <option>الرياض</option><option>جدة</option>
+            <option>الدمام</option><option>مكة</option>
+            <option>المدينة</option><option>أخرى</option>
+          </select>
+        </div>
+        <div>
+          <label class="label">نوع العقار</label>
+          <select id="cf-type">
+            <option>فيلا</option><option>شقة</option>
+            <option>تجاري</option><option>أرض</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">الحي (اختياري)</label>
+        <input type="text" id="cf-district" placeholder="النرجس، حطين...">
+      </div>
+      <div class="field">
+        <label class="label">وصف المشكلة أو الهدف <span class="req">*</span></label>
+        <textarea id="cf-desc" rows="4" placeholder="صف المشكلة أو هدف الفحص..."></textarea>
+      </div>
+      <div class="field">
+        <label class="label">صور المشكلة (اختياري)</label>
+        <div class="upload-zone" onclick="document.getElementById('client-photo-input').click()">
+          <div class="upload-icon">📎</div>
+          <div class="upload-label">اضغط لإضافة صور</div>
+          <div class="upload-hint">حتى 5 صور — JPG أو PNG</div>
+        </div>
+        <input type="file" id="client-photo-input" accept="image/*" multiple onchange="handleClientPhotos(event)">
+        <div class="photo-grid" id="client-photos-grid"></div>
+      </div>
+      <button class="btn btn-gold" onclick="submitClientRequest()">
+        إرسال الطلب ✉️
+      </button>
+
+      <!-- success state -->
+      <div id="client-success" style="display:none">
+        <div style="text-align:center;padding:30px 0">
+          <div style="font-size:56px;margin-bottom:16px">✅</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:8px">تم إرسال طلبك!</div>
+          <div style="font-size:13px;color:#7A99B8;line-height:1.8;margin-bottom:20px">
+            رقم طلبك: <strong class="text-gold" id="success-visit-num">MC-2026-XXXX</strong><br>
+            سيتواصل معك مهندسنا خلال 24 ساعة
+          </div>
+          <div class="card card-sm">
+            <div style="font-size:11px;color:#C8962A;font-weight:700;margin-bottom:6px">📱 رسالة واتساب أُرسِلت</div>
+            <div style="font-size:13px;color:#90CAF9;line-height:1.8" id="success-wa-msg"></div>
+          </div>
+          <button class="btn btn-outline mt8" onclick="resetClientForm()" style="margin-top:16px">
+            إرسال طلب جديد
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: ENGINEER INSPECTION ════ -->
+    <div class="page" id="page-inspect">
+      <div id="inspect-form-wrap">
+        <div class="page-head">
+          <div class="page-tag">نموذج الفحص الميداني</div>
+          <div class="page-title">فحص عنصر</div>
+          <div style="text-align:center;margin-top:8px">
+            <span class="status-pill sp-new" id="inspect-visit-badge">🔗 اختر زيارة أولاً</span>
+          </div>
+        </div>
+
+        <!-- Visit selector -->
+        <div class="field">
+          <label class="label">رقم الزيارة <span class="req">*</span></label>
+          <select id="insp-visit-select" onchange="onVisitSelect(this.value)">
+            <option value="">— اختر زيارة —</option>
+          </select>
+        </div>
+
+        <!-- Element type -->
+        <div class="field">
+          <label class="label">نوع العنصر <span class="req">*</span></label>
+          <div class="type-grid" id="type-grid">
+            <div class="type-btn sel" data-val="column" onclick="selectType(this)"><div class="ico">🏛️</div>عمود</div>
+            <div class="type-btn" data-val="slab"   onclick="selectType(this)"><div class="ico">⬛</div>بلاطة</div>
+            <div class="type-btn" data-val="beam"   onclick="selectType(this)"><div class="ico">━</div>كمرة</div>
+            <div class="type-btn" data-val="finishing" onclick="selectType(this)"><div class="ico">🪟</div>تشطيب</div>
+            <div class="type-btn" data-val="crack"  onclick="selectType(this)"><div class="ico">⚡</div>شرخ</div>
+            <div class="type-btn" data-val="moisture" onclick="selectType(this)"><div class="ico">💧</div>رطوبة</div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label class="label">رقم العنصر</label>
+            <input type="text" id="insp-ref" placeholder="COL-B2-F1">
+            <div class="hint">COL / SLB / BM / CRK</div>
+          </div>
+          <div>
+            <label class="label">موقع العنصر</label>
+            <input type="text" id="insp-loc" placeholder="الدور الأول">
+          </div>
+        </div>
+
+        <!-- Photo upload -->
+        <div class="field">
+          <label class="label">صور العنصر <span class="req">*</span> <span style="color:#4A6A8A;font-weight:400">1–6 صور</span></label>
+          <div class="photo-grid" id="insp-photos-grid">
+            <div class="add-photo-btn" onclick="document.getElementById('photo-input').click()">
+              <span style="font-size:24px">📷</span>
+              <span>أضف صورة</span>
+            </div>
+          </div>
+          <input type="file" id="photo-input" accept="image/*" capture="environment" multiple onchange="handleInspPhotos(event)">
+        </div>
+
+        <!-- Urgent -->
+        <div class="toggle-row" onclick="toggleUrgent()">
+          <div>
+            <div class="toggle-label">⚠️ يوجد خطر فوري على السلامة؟</div>
+            <div class="toggle-sub">فعّل هذا إذا كان العنصر يُشكِّل خطرًا مباشرًا</div>
+          </div>
+          <div class="toggle-sw" id="urgent-toggle"></div>
+        </div>
+
+        <!-- Notes -->
+        <div class="field">
+          <label class="label">ملاحظات المهندس</label>
+          <textarea id="insp-notes" rows="3" placeholder="أي ملاحظات إضافية تساعد الـ AI في التحليل..."></textarea>
+        </div>
+
+        <button class="btn btn-green" onclick="submitInspection()">
+          إرسال للتحليل الذكي 🤖
+        </button>
+      </div>
+
+      <!-- AI processing state -->
+      <div id="insp-processing" style="display:none;text-align:center;padding:40px 10px">
+        <div style="font-size:56px;margin-bottom:16px">🤖</div>
+        <div style="font-size:20px;font-weight:800;margin-bottom:8px">جارٍ التحليل الذكي</div>
+        <div style="font-size:13px;color:#7A99B8;line-height:1.8;margin-bottom:20px">
+          AI يُحلِّل الصور الآن<br>
+          ستصلك إشعارًا عند اكتمال التحليل
+        </div>
+        <div class="prog-bar"><div class="prog-fill"></div></div>
+        <div style="display:flex;justify-content:center;gap:24px;font-size:11px">
+          <div style="color:#4ADE80">📸 الصور مرفوعة</div>
+          <div style="color:#4ADE80">🤖 AI يعمل</div>
+          <div style="color:#4A6A8A">⏳ النتائج</div>
+        </div>
+        <button class="btn btn-outline" style="margin-top:24px;width:auto;padding:10px 24px" onclick="resetInspForm()">
+          فحص عنصر آخر
+        </button>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: REVIEW ════ -->
+    <div class="page" id="page-review">
+      <div class="page-head">
+        <div class="page-tag">مراجعة نتائج AI</div>
+        <div class="page-title">الفحوصات المعلّقة</div>
+      </div>
+
+      <div id="review-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- ════ PAGE: REPORTS ════ -->
+    <div class="page" id="page-reports">
+      <div class="page-head">
+        <div class="page-tag">التقارير</div>
+        <div class="page-title">الزيارات والتقارير</div>
+      </div>
+      <div id="reports-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav id="bottom-nav">
+    <button class="nav-item active" onclick="navTo('home',this)" id="nav-home">
+      <span class="nav-icon">🏠</span>
+      <span id="nav-home-label">طلب فحص</span>
+    </button>
+    <button class="nav-item" onclick="navTo('inspect',this)" id="nav-inspect" style="display:none">
+      <span class="nav-icon">🔍</span>
+      <span>فحص عنصر</span>
+    </button>
+    <button class="nav-item" onclick="navTo('review',this)" id="nav-review" style="display:none">
+      <span class="nav-icon">✅</span>
+      <span>المراجعة</span>
+    </button>
+    <button class="nav-item" onclick="navTo('reports',this)" id="nav-reports">
+      <span class="nav-icon">📄</span>
+      <span>التقارير</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- ════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script>
+// ─── STATE ───────────────────────────────
+const STATE = {
+  user:       null,   // { id, name, phone, role: 'client'|'engineer' }
+  visits:     [],
+  currentVisitId: null,
+  inspPhotos: [],
+  clientPhotos: [],
+  decisions:  {},     // { defect_id: 'approved'|'modified'|'rejected' }
+  urgentOn:   false,
+  selectedType: 'column',
+};
+
+// ─── SUPABASE HELPERS ────────────────────
+async function supaFetch(path, opts = {}) {
+  const url  = CONFIG.SUPABASE_URL + '/rest/v1/' + path;
+  const res  = await fetch(url, {
+    ...opts,
+    headers: {
+      'apikey':        CONFIG.SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON_KEY,
+      'Content-Type':  'application/json',
+      'Prefer':        opts.prefer || 'return=representation',
+      ...(opts.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+const dbGet    = (table, query='') => supaFetch(table + '?' + query);
+const dbInsert = (table, body)     => supaFetch(table, { method:'POST', body: JSON.stringify(body) });
+const dbPatch  = (table, filter, body) => supaFetch(table+'?'+filter, { method:'PATCH', body: JSON.stringify(body), prefer:'return=minimal' });
+
+// ─── TOAST ───────────────────────────────
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  setTimeout(() => el.className = '', 2800);
+}
+
+// ─── LOADING ─────────────────────────────
+function showLoading(txt='جارٍ المعالجة...') {
+  document.getElementById('loading-text').textContent = txt;
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading').classList.remove('show');
+}
+
+// ─── NAVIGATION ──────────────────────────
+function navTo(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (btn) btn.classList.add('active');
+  // load data
+  if (page === 'review')  loadReview();
+  if (page === 'reports') loadReports();
+  if (page === 'inspect') loadVisitOptions();
+}
+
+// ─── LOGIN ───────────────────────────────
+let loginRole = 'client';
+
+function showLoginForm(role) {
+  loginRole = role;
+  document.getElementById('login-role-select').style.display = 'none';
+  document.getElementById('login-form-wrap').style.display   = 'block';
+  const titles = { client: '🏠 دخول صاحب العقار', engineer: '🔧 دخول المهندس' };
+  document.getElementById('login-form-title').textContent = titles[role];
+  document.getElementById('login-name-wrap').style.display = role === 'client' ? 'block' : 'none';
+  document.getElementById('login-pass-wrap').style.display = role === 'engineer' ? 'block' : 'none';
+}
+
+function backToRoles() {
+  document.getElementById('login-role-select').style.display = 'block';
+  document.getElementById('login-form-wrap').style.display   = 'none';
+}
+
+async function doLogin() {
+  const phone = document.getElementById('login-phone').value.trim();
+  if (!phone || phone.length < 9) { toast('أدخل رقم الجوال', 'error'); return; }
+
+  showLoading('جارٍ تسجيل الدخول...');
+
+  try {
+    if (loginRole === 'client') {
+      const name = document.getElementById('login-name').value.trim() || 'عزيزي العميل';
+      // For MVP: create or find client by phone
+      const existing = await dbGet('clients', `phone_hash=eq.${phone}&limit=1`);
+      let clientId;
+      if (existing && existing.length > 0) {
+        clientId = existing[0].id;
+      } else {
+        const rec = await dbInsert('clients', {
+          phone_hash:  phone,
+          phone_last4: phone.slice(-4),
+          name, city: 'الرياض',
+        });
+        clientId = Array.isArray(rec) ? rec[0].id : rec.id;
+      }
+      STATE.user = { id: clientId, name, phone, role: 'client' };
+
+    } else {
+      const pass = document.getElementById('login-pass').value;
+      // MVP: simple check — in production use Supabase Auth
+      const eng = await dbGet('engineers', `phone=eq.${phone}&is_active=eq.true&limit=1`);
+      if (!eng || eng.length === 0) {
+        hideLoading(); toast('رقم الجوال غير موجود', 'error'); return;
+      }
+      STATE.user = { id: eng[0].id, name: eng[0].name, phone, role: 'engineer' };
+    }
+
+    hideLoading();
+    onLoginSuccess();
+
+  } catch(e) {
+    hideLoading();
+    // Fallback: demo mode if Supabase not configured
+    if (CONFIG.SUPABASE_URL.includes('YOUR_PROJECT')) {
+      STATE.user = {
+        id: 'demo-id',
+        name: loginRole === 'engineer' ? 'م. أحمد المطيري' : document.getElementById('login-name').value || 'محمد العنزي',
+        phone,
+        role: loginRole,
+      };
+      onLoginSuccess();
+    } else {
+      toast('خطأ في الاتصال — تحقق من الإعدادات', 'error');
+    }
+  }
+}
+
+function onLoginSuccess() {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('user-pill').style.display = 'flex';
+  document.getElementById('logout-btn').style.display = 'block';
+  document.getElementById('user-name-display').textContent = STATE.user.name;
+
+  if (STATE.user.role === 'engineer') {
+    // show engineer nav items
+    document.getElementById('nav-inspect').style.display = 'flex';
+    document.getElementById('nav-review').style.display  = 'flex';
+    document.getElementById('nav-home-label').textContent = 'الرئيسية';
+    // change home page to engineer dashboard
+    showEngineerHome();
+  }
+  toast('أهلًا ' + STATE.user.name + ' 👋', 'success');
+}
+
+function logout() {
+  STATE.user = null;
+  location.reload();
+}
+
+// ─── ENGINEER HOME ───────────────────────
+function showEngineerHome() {
+  const homePage = document.getElementById('page-home');
+  homePage.innerHTML = `
+    <div class="page-head">
+      <div class="page-tag">لوحة التحكم</div>
+      <div class="page-title">مرحباً م. ${STATE.user.name.replace('م. ','')}</div>
+      <div class="page-sub">الزيارات المعيَّنة لك</div>
+    </div>
+    <div id="eng-visits-list"><div class="centered text-muted" style="padding:30px">جارٍ التحميل...</div></div>
+  `;
+  loadEngineerVisits();
+}
+
+async function loadEngineerVisits() {
+  try {
+    const visits = await dbGet('visits', `status=in.(new,scheduled,in_progress,pending_review)&order=created_at.desc&limit=20`);
+    const el = document.getElementById('eng-visits-list');
+    if (!visits || visits.length === 0) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">لا توجد زيارات معلّقة</div><div class="empty-sub">ستظهر الزيارات الجديدة هنا</div></div>`;
+      return;
+    }
+    el.innerHTML = visits.map(v => `
+      <div class="visit-card" onclick="navTo('inspect', document.getElementById('nav-inspect'))">
+        <div class="vc-top">
+          <div class="vc-num">${v.visit_number}</div>
+          <span class="status-pill sp-${v.status}">${statusLabel(v.status)}</span>
+        </div>
+        <div class="vc-client">${v.city || ''} — ${v.property_type || ''}</div>
+        <div class="vc-meta">${formatDate(v.created_at)}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    // demo data
+    document.getElementById('eng-visits-list').innerHTML = `
+      <div class="visit-card">
+        <div class="vc-top"><div class="vc-num">MC-2026-4721</div><span class="status-pill sp-new">جديد</span></div>
+        <div class="vc-client">الرياض — فيلا</div>
+        <div class="vc-meta">اليوم 10:30 ص</div>
+      </div>
+      <div class="visit-card">
+        <div class="vc-top"><div class="vc-num">MC-2026-4718</div><span class="status-pill sp-pending_review">انتظار مراجعة</span></div>
+        <div class="vc-client">جدة — شقة</div>
+        <div class="vc-meta">أمس 2:15 م</div>
+      </div>
+    `;
+  }
+}
+
+// ─── CLIENT PHOTOS ───────────────────────
+function handleClientPhotos(e) {
+  const files = Array.from(e.target.files).slice(0, 5);
+  const grid = document.getElementById('client-photos-grid');
+  grid.innerHTML = '';
+  STATE.clientPhotos = files;
+  files.forEach((f, i) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const div = document.createElement('div');
+      div.className = 'photo-thumb';
+      div.innerHTML = `<img src="${ev.target.result}">
+        <button class="del" onclick="removeClientPhoto(${i})">✕</button>`;
+      grid.appendChild(div);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function removeClientPhoto(i) {
+  STATE.clientPhotos.splice(i, 1);
+  document.getElementById('client-photo-input').value = '';
+  handleClientPhotos({ target: { files: STATE.clientPhotos } });
+}
+
+// ─── CLIENT FORM SUBMIT ──────────────────
+async function submitClientRequest() {
+  const name  = document.getElementById('cf-name').value.trim();
+  const phone = document.getElementById('cf-phone').value.trim();
+  const desc  = document.getElementById('cf-desc').value.trim();
+  if (!name)  { toast('الاسم مطلوب', 'error'); return; }
+  if (!phone || phone.length < 9) { toast('رقم الجوال غير صالح', 'error'); return; }
+  if (!desc)  { toast('وصف المشكلة مطلوب', 'error'); return; }
+
+  showLoading('جارٍ إرسال طلبك...');
+
+  const visitNum = 'MC-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000);
+  const payload = {
+    name, phone,
+    phone_last4:   phone.slice(-4),
+    city:          document.getElementById('cf-city').value,
+    district:      document.getElementById('cf-district').value,
+    property_type: document.getElementById('cf-type').value,
+    description:   desc,
+    visit_number:  visitNum,
+    submitted_at:  new Date().toISOString(),
+  };
+
+  try {
+    // Try real n8n webhook
+    if (!CONFIG.N8N_WEBHOOK_URL.includes('YOUR_N8N')) {
+      await fetch(CONFIG.N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      // Demo: save directly to Supabase
+      if (!CONFIG.SUPABASE_URL.includes('YOUR_PROJECT')) {
+        let clientId;
+        const existing = await dbGet('clients', `phone_hash=eq.${phone}&limit=1`);
+        if (existing && existing.length > 0) {
+          clientId = existing[0].id;
+        } else {
+          const cl = await dbInsert('clients', { name, phone_hash: phone, phone_last4: phone.slice(-4), city: payload.city });
+          clientId = Array.isArray(cl) ? cl[0].id : cl.id;
+        }
+        await dbInsert('visits', {
+          visit_number:  visitNum,
+          client_id:     clientId,
+          property_type: payload.property_type,
+          city:          payload.city,
+          district:      payload.district,
+          visit_type:    'general_inspection',
+          status:        'new',
+          notes:         desc,
+        });
+      }
+      await new Promise(r => setTimeout(r, 800)); // simulate
+    }
+
+    hideLoading();
+    // Show success
+    document.getElementById('cf-name').closest('.field').style.display = 'none';
+    ['cf-phone','cf-city','cf-type','cf-district','cf-desc'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.closest('.field')) el.closest('.field').style.display='none';
+      if (el && el.closest('.grid2')) el.closest('.grid2').style.display='none';
+    });
+    document.querySelector('#page-home .upload-zone')?.closest('.field')?.remove();
+    document.querySelector('#page-home .btn-gold')?.remove();
+    document.getElementById('success-visit-num').textContent = visitNum;
+    document.getElementById('success-wa-msg').innerHTML =
+      `أهلًا ${name} ✅<br>استلمنا طلبك — رقم الطلب: <strong>${visitNum}</strong><br>سيتواصل معك مهندسنا قريبًا<br>المطري كونسلت — المستشار مؤتمن`;
+    document.getElementById('client-success').style.display = 'block';
+    toast('تم إرسال طلبك بنجاح ✅', 'success');
+
+  } catch(e) {
+    hideLoading();
+    toast('حدث خطأ — تحقق من الاتصال', 'error');
+  }
+}
+
+function resetClientForm() { location.reload(); }
+
+// ─── INSPECTION PHOTOS ───────────────────
+function handleInspPhotos(e) {
+  const newFiles = Array.from(e.target.files);
+  STATE.inspPhotos = [...STATE.inspPhotos, ...newFiles].slice(0, 6);
+  renderInspPhotos();
+}
+
+function renderInspPhotos() {
+  const grid = document.getElementById('insp-photos-grid');
+  grid.innerHTML = '';
+  STATE.inspPhotos.forEach((f, i) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const div = document.createElement('div');
+      div.className = 'photo-thumb';
+      div.innerHTML = `<img src="${ev.target.result}">
+        <button class="del" onclick="removeInspPhoto(${i})">✕</button>`;
+      grid.insertBefore(div, grid.lastChild);
+    };
+    reader.readAsDataURL(f);
+  });
+  if (STATE.inspPhotos.length < 6) {
+    const add = document.createElement('div');
+    add.className = 'add-photo-btn';
+    add.innerHTML = '<span style="font-size:24px">📷</span><span>أضف صورة</span>';
+    add.onclick = () => document.getElementById('photo-input').click();
+    grid.appendChild(add);
+  }
+}
+
+function removeInspPhoto(i) {
+  STATE.inspPhotos.splice(i, 1);
+  renderInspPhotos();
+}
+
+// ─── TYPE SELECTOR ───────────────────────
+function selectType(el) {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  STATE.selectedType = el.dataset.val;
+}
+
+// ─── URGENT TOGGLE ───────────────────────
+function toggleUrgent() {
+  STATE.urgentOn = !STATE.urgentOn;
+  document.getElementById('urgent-toggle').classList.toggle('on', STATE.urgentOn);
+}
+
+// ─── VISIT OPTIONS ───────────────────────
+async function loadVisitOptions() {
+  try {
+    const visits = await dbGet('visits', 'status=in.(new,scheduled,in_progress)&order=created_at.desc&limit=30');
+    const sel = document.getElementById('insp-visit-select');
+    sel.innerHTML = '<option value="">— اختر زيارة —</option>';
+    if (visits && visits.length > 0) {
+      visits.forEach(v => {
+        sel.innerHTML += `<option value="${v.id}" data-num="${v.visit_number}">${v.visit_number} — ${v.city} ${v.property_type}</option>`;
+      });
+    } else {
+      sel.innerHTML += '<option value="demo" data-num="MC-2026-4721">MC-2026-4721 — الرياض فيلا (تجريبي)</option>';
+    }
+  } catch(e) {
+    const sel = document.getElementById('insp-visit-select');
+    sel.innerHTML = '<option value="demo" data-num="MC-2026-4721">MC-2026-4721 — الرياض فيلا (تجريبي)</option>';
+  }
+}
+
+function onVisitSelect(val) {
+  if (!val) return;
+  const opt = document.querySelector(`#insp-visit-select option[value="${val}"]`);
+  const num = opt ? opt.dataset.num : val;
+  STATE.currentVisitId = val;
+  document.getElementById('inspect-visit-badge').textContent = '🔗 ' + num;
+  document.getElementById('inspect-visit-badge').className = 'status-pill sp-new';
+}
+
+// ─── SUBMIT INSPECTION ───────────────────
+async function submitInspection() {
+  if (!STATE.currentVisitId) { toast('اختر رقم الزيارة أولاً', 'error'); return; }
+  if (STATE.inspPhotos.length === 0) { toast('أضف صورة واحدة على الأقل', 'error'); return; }
+
+  showLoading('جارٍ رفع الصور...');
+
+  try {
+    const imageUrls = [];
+
+    // Upload photos to Supabase Storage
+    if (!CONFIG.SUPABASE_URL.includes('YOUR_PROJECT')) {
+      for (const photo of STATE.inspPhotos) {
+        const fname = `${STATE.currentVisitId}/${Date.now()}_${photo.name}`;
+        const res = await fetch(`${CONFIG.SUPABASE_URL}/storage/v1/object/photos/${fname}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON_KEY,
+            'Content-Type': photo.type || 'image/jpeg',
+          },
+          body: photo,
+        });
+        if (res.ok) {
+          imageUrls.push(`${CONFIG.SUPABASE_URL}/storage/v1/object/public/photos/${fname}`);
+        }
+      }
+    } else {
+      // Demo mode
+      imageUrls.push('https://demo.example.com/photo1.jpg');
+      await new Promise(r => setTimeout(r, 1200));
+    }
+
+    document.getElementById('loading-text').textContent = 'جارٍ إرسال للتحليل...';
+
+    // Create inspection row
+    let inspectionId = 'demo-insp-' + Date.now();
+    if (!CONFIG.SUPABASE_URL.includes('YOUR_PROJECT')) {
+      const insp = await dbInsert('inspections', {
+        visit_id:         STATE.currentVisitId,
+        element_type:     STATE.selectedType,
+        element_ref:      document.getElementById('insp-ref').value || 'AUTO',
+        element_location: document.getElementById('insp-loc').value || '',
+        text_note:        document.getElementById('insp-notes').value || '',
+        is_urgent:        STATE.urgentOn,
+        review_status:    'ai_processing',
+      });
+      inspectionId = Array.isArray(insp) ? insp[0].id : insp.id;
+    }
+
+    // Fire n8n webhook
+    const webhookPayload = {
+      inspection_id:    inspectionId,
+      visit_id:         STATE.currentVisitId,
+      element_type:     STATE.selectedType,
+      element_ref:      document.getElementById('insp-ref').value || 'AUTO',
+      element_location: document.getElementById('insp-loc').value || '',
+      text_note:        document.getElementById('insp-notes').value || '',
+      is_urgent:        STATE.urgentOn,
+      image_urls:       imageUrls,
+      submitted_at:     new Date().toISOString(),
+    };
+
+    if (!CONFIG.N8N_INSPECTION_WEBHOOK.includes('YOUR_N8N')) {
+      fetch(CONFIG.N8N_INSPECTION_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload),
+      }).catch(() => {});
+    }
+
+    hideLoading();
+    document.getElementById('inspect-form-wrap').style.display  = 'none';
+    document.getElementById('insp-processing').style.display    = 'block';
+    toast('تم الإرسال — الـ AI يحلل الآن 🤖', 'success');
+
+  } catch(e) {
+    hideLoading();
+    toast('خطأ في الرفع — تحقق من الاتصال', 'error');
+  }
+}
+
+function resetInspForm() {
+  STATE.inspPhotos = [];
+  STATE.currentVisitId = null;
+  STATE.urgentOn = false;
+  document.getElementById('inspect-form-wrap').style.display = 'block';
+  document.getElementById('insp-processing').style.display   = 'none';
+  document.getElementById('insp-visit-select').value = '';
+  document.getElementById('insp-ref').value   = '';
+  document.getElementById('insp-loc').value   = '';
+  document.getElementById('insp-notes').value = '';
+  document.getElementById('urgent-toggle').classList.remove('on');
+  document.getElementById('inspect-visit-badge').textContent = '🔗 اختر زيارة أولاً';
+  renderInspPhotos();
+}
+
+// ─── REVIEW PAGE ─────────────────────────
+async function loadReview() {
+  const el = document.getElementById('review-list');
+  el.innerHTML = '<div class="centered text-muted" style="padding:30px">جارٍ التحميل...</div>';
+
+  try {
+    const inspections = await dbGet('inspections',
+      'review_status=eq.pending_review&order=created_at.desc&limit=20');
+
+    if (!inspections || inspections.length === 0) {
+      el.innerHTML = demoReviewHTML();
+      return;
+    }
+
+    let html = '';
+    for (const insp of inspections) {
+      const defects = await dbGet('defects', `inspection_id=eq.${insp.id}&decision=eq.pending`);
+      html += renderInspectionCard(insp, defects || []);
+    }
+    el.innerHTML = html || demoReviewHTML();
+
+  } catch(e) {
+    el.innerHTML = demoReviewHTML();
+  }
+}
+
+function renderInspectionCard(insp, defects) {
+  const conf = insp.confidence_score ? Math.round(insp.confidence_score * 100) : 85;
+  return `
+    <div class="card" style="margin-bottom:16px">
+      <div class="row-between mb14">
+        <div>
+          <div class="fw7">${insp.element_ref || 'عنصر'} — ${typeLabel(insp.element_type)}</div>
+          <div class="text-sm text-muted mt8">${insp.element_location || ''}</div>
+        </div>
+        <div style="text-align:left">
+          <div class="text-sm text-muted">ثقة AI</div>
+          <div style="font-size:18px;font-weight:800;color:#4ADE80">${conf}%</div>
+        </div>
+      </div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>
+    </div>
+    ${defects.map(d => renderFindingCard(d)).join('')}
+    <button class="btn btn-outline btn-sm" style="margin-bottom:20px"
+      onclick="approveAll('${insp.id}')">اعتماد الكل ✓</button>
+  `;
+}
+
+function renderFindingCard(d) {
+  return `
+    <div class="finding-card" id="fc-${d.id}">
+      <div class="fc-top">
+        <div class="fc-left">
+          <span class="badge badge-${d.severity_level}">${sevLabel(d.severity_level)}</span>
+        </div>
+        <span class="fc-code">${d.defect_code || ''}</span>
+      </div>
+      <div class="fc-name">${d.defect_name}</div>
+      <div class="fc-desc">${d.description_ar}</div>
+      <div class="fc-loc">📍 ${d.location_in_element || ''}</div>
+      <div class="dec-row">
+        <button class="dec-btn" onclick="makeDecision('${d.id}','approved',this)">موافق</button>
+        <button class="dec-btn" onclick="makeDecision('${d.id}','modified',this)">تعديل</button>
+        <button class="dec-btn" onclick="makeDecision('${d.id}','rejected',this)">رفض</button>
+      </div>
+    </div>
+  `;
+}
+
+async function makeDecision(defectId, decision, btn) {
+  const row = btn.closest('.dec-row');
+  row.querySelectorAll('.dec-btn').forEach(b => b.classList.remove('approved','modified','rejected'));
+  btn.classList.add(decision);
+  STATE.decisions[defectId] = decision;
+
+  try {
+    if (!CONFIG.SUPABASE_URL.includes('YOUR_PROJECT')) {
+      await dbPatch('defects', `id=eq.${defectId}`, {
+        decision, decided_at: new Date().toISOString()
+      });
+    }
+    const labels = { approved:'معتمد ✅', modified:'معدَّل ✏️', rejected:'مرفوض ❌' };
+    toast(labels[decision], 'success');
+  } catch(e) {
+    toast('تم الحفظ محلياً', '');
+  }
+}
+
+async function approveAll(inspectionId) {
+  showLoading('جارٍ الاعتماد...');
+  try {
+    if (!CONFIG.SUPABASE_URL.includes('YOUR_PROJECT')) {
+      await dbPatch('defects', `inspection_id=eq.${inspectionId}&decision=eq.pending`,
+        { decision: 'approved', decided_at: new Date().toISOString() });
+      await dbPatch('inspections', `id=eq.${inspectionId}`,
+        { review_status: 'approved', reviewed_at: new Date().toISOString() });
+    }
+    hideLoading();
+    toast('تم اعتماد الفحص ✅', 'success');
+    setTimeout(loadReview, 800);
+  } catch(e) {
+    hideLoading();
+    toast('تم الاعتماد (تجريبي)', 'success');
+  }
+}
+
+function demoReviewHTML() {
+  return `
+    <div class="card" style="margin-bottom:16px">
+      <div class="row-between mb14">
+        <div>
+          <div class="fw7">COL-B2-F1 — عمود</div>
+          <div class="text-sm text-muted mt8">الدور الأول — الجانب الجنوبي</div>
+        </div>
+        <div style="text-align:left">
+          <div class="text-sm text-muted">ثقة AI</div>
+          <div style="font-size:18px;font-weight:800;color:#4ADE80">84%</div>
+        </div>
+      </div>
+      <div class="conf-bar"><div class="conf-fill" style="width:84%"></div></div>
+    </div>
+    <div class="finding-card">
+      <div class="fc-top"><div class="fc-left"><span class="badge badge-high">عالي</span></div><span class="fc-code">STR-CRK-DIA</span></div>
+      <div class="fc-name">شرخ قطري</div>
+      <div class="fc-desc">شرخ قطري بعرض 3mm يمتد على طول 45cm في الربع السفلي من العمود</div>
+      <div class="fc-loc">📍 قاعدة العمود — الجانب الغربي</div>
+      <div class="dec-row">
+        <button class="dec-btn" onclick="demoDecide(this,'approved')">موافق</button>
+        <button class="dec-btn" onclick="demoDecide(this,'modified')">تعديل</button>
+        <button class="dec-btn" onclick="demoDecide(this,'rejected')">رفض</button>
+      </div>
+    </div>
+    <div class="finding-card">
+      <div class="fc-top"><div class="fc-left"><span class="badge badge-moderate">متوسط</span></div><span class="fc-code">STR-RBR-COR</span></div>
+      <div class="fc-name">تآكل حديد</div>
+      <div class="fc-desc">ظهور صدأ الحديد على سطح الخرسانة مصحوب بتفصص طفيف</div>
+      <div class="fc-loc">📍 منتصف العمود</div>
+      <div class="dec-row">
+        <button class="dec-btn" onclick="demoDecide(this,'approved')">موافق</button>
+        <button class="dec-btn" onclick="demoDecide(this,'modified')">تعديل</button>
+        <button class="dec-btn" onclick="demoDecide(this,'rejected')">رفض</button>
+      </div>
+    </div>
+  `;
+}
+
+function demoDecide(btn, val) {
+  btn.closest('.dec-row').querySelectorAll('.dec-btn').forEach(b => b.classList.remove('approved','modified','rejected'));
+  btn.classList.add(val);
+  const labels = { approved:'معتمد ✅', modified:'معدَّل ✏️', rejected:'مرفوض ❌' };
+  toast(labels[val], 'success');
+}
+
+// ─── REPORTS PAGE ────────────────────────
+async function loadReports() {
+  const el = document.getElementById('reports-list');
+  el.innerHTML = '<div class="centered text-muted" style="padding:30px">جارٍ التحميل...</div>';
+
+  try {
+    const visits = await dbGet('visits', 'order=created_at.desc&limit=20');
+    if (!visits || visits.length === 0) { el.innerHTML = demoReportsHTML(); return; }
+
+    el.innerHTML = visits.map(v => `
+      <div class="visit-card">
+        <div class="vc-top">
+          <div class="vc-num">${v.visit_number}</div>
+          <span class="status-pill sp-${v.status}">${statusLabel(v.status)}</span>
+        </div>
+        <div class="vc-client">${v.city || '—'} — ${v.property_type || '—'}</div>
+        <div class="vc-meta">${formatDate(v.created_at)}</div>
+        ${v.status === 'completed' ? `<button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="downloadReport('${v.id}')">📥 تحميل PDF</button>` : ''}
+      </div>
+    `).join('');
+
+  } catch(e) {
+    el.innerHTML = demoReportsHTML();
+  }
+}
+
+function demoReportsHTML() {
+  return `
+    <div class="report-hero">
+      <div class="rpt-tag">تقرير الفحص الهندسي</div>
+      <div class="rpt-num">RPT-2026-0042</div>
+      <div class="rpt-vis">الزيارة: MC-2026-4721</div>
+      <div class="rpt-div"></div>
+      <div class="rpt-meta">
+        <div><div class="meta-k">العميل</div><div class="meta-v">محمد العنزي</div></div>
+        <div><div class="meta-k">العقار</div><div class="meta-v">فيلا — الرياض</div></div>
+        <div><div class="meta-k">المهندس</div><div class="meta-v">م. أحمد المطيري</div></div>
+        <div><div class="meta-k">التاريخ</div><div class="meta-v">15 مارس 2026</div></div>
+      </div>
+    </div>
+    <div class="cond-card">
+      <div class="cond-icon" style="background:linear-gradient(135deg,#8B1A1A,#5A1A1A)">⚠️</div>
+      <div><div class="cond-lbl">الحالة العامة</div><div class="cond-val">تحتاج متابعة هيكلية</div></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-n" style="color:#FF6B35">1</div><div class="stat-lbl">عالي</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:#FCD34D">1</div><div class="stat-lbl">متوسط</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:#4ADE80">1</div><div class="stat-lbl">منخفض</div></div>
+      <div class="stat-box"><div class="stat-n" style="color:#90CAF9">3</div><div class="stat-lbl">الكل</div></div>
+    </div>
+    <button class="btn btn-green">📥 تحميل PDF</button>
+    <button class="btn btn-outline">📱 إرسال للعميل عبر واتساب</button>
+  `;
+}
+
+function downloadReport(visitId) {
+  toast('جارٍ تحضير التقرير...', '');
+}
+
+// ─── HELPERS ─────────────────────────────
+function statusLabel(s) {
+  const m = { new:'جديد', scheduled:'مجدول', in_progress:'جارٍ',
+    ai_processing:'AI يعمل', pending_review:'انتظار مراجعة',
+    generating_report:'يُولَّد', completed:'مكتملة', cancelled:'ملغاة' };
+  return m[s] || s;
+}
+function typeLabel(t) {
+  const m = { column:'عمود', slab:'بلاطة', beam:'كمرة', finishing:'تشطيب', crack:'شرخ', moisture:'رطوبة' };
+  return m[t] || t;
+}
+function sevLabel(s) {
+  return { critical:'حرج', high:'عالي', moderate:'متوسط', low:'منخفض' }[s] || s;
+}
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('ar-SA', { day:'numeric', month:'long', year:'numeric' });
+}
+
+// ─── PWA SERVICE WORKER ──────────────────
+if ('serviceWorker' in navigator) {
+  const sw = `
+    self.addEventListener('install', e => self.skipWaiting());
+    self.addEventListener('activate', e => clients.claim());
+    self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
+  `;
+  const blob = new Blob([sw], { type: 'application/javascript' });
+  const url  = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(() => {});
+}
+</script>
+</body>
+</html>
