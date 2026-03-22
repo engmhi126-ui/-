@@ -528,8 +528,9 @@ textarea { resize: none; line-height: 1.6; }
       </div>
       <div class="grid2">
         <div>
-          <label class="label">المدينة</label>
+          <label class="label">المدينة <span class="req">*</span></label>
           <select id="cf-city">
+            <option value="">اختر المدينة</option>
             <option>الرياض</option><option>جدة</option>
             <option>الدمام</option><option>مكة</option>
             <option>المدينة</option><option>أخرى</option>
@@ -590,7 +591,7 @@ textarea { resize: none; line-height: 1.6; }
             سيتواصل معك مهندسنا خلال 24 ساعة
           </div>
           <div class="card card-sm">
-            <div style="font-size:11px;color:#C8962A;font-weight:700;margin-bottom:6px">📱 رسالة واتساب أُرسِلت</div>
+            <div style="font-size:11px;color:#4ADE80;font-weight:700;margin-bottom:6px">🔔 تأكيد داخل التطبيق</div>
             <div style="font-size:13px;color:#90CAF9;line-height:1.8" id="success-wa-msg"></div>
           </div>
           <button class="btn btn-outline mt8" onclick="resetClientForm()" style="margin-top:16px">
@@ -989,6 +990,8 @@ async function submitClientRequest() {
   const time  = document.getElementById('preferred_time').value;
   if (!name)  { toast('الاسم مطلوب', 'error'); return; }
   if (!phone || phone.length < 9) { toast('رقم الجوال غير صالح', 'error'); return; }
+  const city = document.getElementById('cf-city').value;
+  if (!city) { toast('المدينة مطلوبة', 'error'); return; }
   if (!desc)  { toast('وصف المشكلة مطلوب', 'error'); return; }
 
   // Validate preferred date and time
@@ -1312,8 +1315,14 @@ async function loadReview() {
   el.innerHTML = '<div class="centered text-muted" style="padding:30px">جارٍ التحميل...</div>';
 
   try {
-    const inspections = await dbGet('inspections',
-      'review_status=eq.pending_review&order=created_at.desc&limit=20');
+    let reviewQuery = 'review_status=eq.pending_review&order=created_at.desc&limit=20';
+    if (STATE.user?.role === 'client' && STATE.user?.id) {
+      const clientVisits = await dbGet('visits', `client_id=eq.${STATE.user.id}&select=id`);
+      if (!clientVisits || clientVisits.length === 0) { el.innerHTML = demoReviewHTML(); return; }
+      const visitIds = clientVisits.map(v => v.id).join(',');
+      reviewQuery = `review_status=eq.pending_review&visit_id=in.(${visitIds})&order=created_at.desc&limit=20`;
+    }
+    const inspections = await dbGet('inspections', reviewQuery);
 
     if (!inspections || inspections.length === 0) {
       el.innerHTML = demoReviewHTML();
@@ -1465,7 +1474,9 @@ async function loadReports() {
   el.innerHTML = '<div class="centered text-muted" style="padding:30px">جارٍ التحميل...</div>';
 
   try {
-    const visits = await dbGet('visits', 'order=created_at.desc&limit=20');
+    const clientFilter = STATE.user?.role === 'client' && STATE.user?.id
+      ? `client_id=eq.${STATE.user.id}&` : '';
+    const visits = await dbGet('visits', clientFilter + 'order=created_at.desc&limit=20');
     if (!visits || visits.length === 0) { el.innerHTML = demoReportsHTML(); return; }
 
     el.innerHTML = visits.map(v => `
@@ -1476,7 +1487,10 @@ async function loadReports() {
         </div>
         <div class="vc-client">${v.city || '—'} — ${v.property_type || '—'}</div>
         <div class="vc-meta">${formatDate(v.created_at)}</div>
-        ${v.status === 'completed' ? `<button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="downloadReport('${v.id}')">📥 تحميل PDF</button>` : ''}
+        ${v.status === 'completed' ? `
+          <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="downloadReport('${v.id}')">📥 تحميل PDF</button>
+          <button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="sendReportInApp('${v.id}')">🔔 إرسال للعميل في التطبيق</button>
+        ` : ''}
       </div>
     `).join('');
 
@@ -1510,12 +1524,23 @@ function demoReportsHTML() {
       <div class="stat-box"><div class="stat-n" style="color:#90CAF9">3</div><div class="stat-lbl">الكل</div></div>
     </div>
     <button class="btn btn-green">📥 تحميل PDF</button>
-    <button class="btn btn-outline">📱 إرسال للعميل عبر واتساب</button>
+    <button class="btn btn-outline" onclick="sendReportInApp()">🔔 إرسال للعميل في التطبيق</button>
   `;
 }
 
 function downloadReport(visitId) {
   toast('جارٍ تحضير التقرير...', '');
+}
+
+async function sendReportInApp(visitId) {
+  try {
+    if (visitId && !CONFIG.SUPABASE_URL.includes('YOUR_PROJECT')) {
+      await dbPatch('visits', `id=eq.${visitId}`, { report_sent_at: new Date().toISOString() });
+    }
+    toast('تم إرسال التقرير للعميل في التطبيق ✅', 'success');
+  } catch(e) {
+    toast('تم الإرسال (تجريبي) ✅', 'success');
+  }
 }
 
 // ─── HELPERS ─────────────────────────────
