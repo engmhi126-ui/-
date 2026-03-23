@@ -422,6 +422,29 @@ textarea { resize: none; line-height: 1.6; }
 .fw7 { font-weight: 700; }
 .centered { text-align: center; }
 
+/* ═══════════ ADMIN TABS ═══════════ */
+.admin-tab {
+  white-space: nowrap; padding: 7px 14px; border-radius: 20px;
+  background: #0B1829; border: 1px solid #1B3A5C;
+  color: #7A99B8; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all .15s; flex-shrink: 0;
+}
+.admin-tab.sel { background: #C8962A; border-color: #C8962A; color: #070F1A; }
+.admin-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.kpi-box {
+  background: #0B1829; border: 1px solid #1B3A5C; border-radius: 14px;
+  padding: 14px 12px; text-align: center;
+}
+.kpi-n   { font-size: 26px; font-weight: 800; color: #C8962A; }
+.kpi-lbl { font-size: 11px; color: #7A99B8; margin-top: 3px; }
+.admin-row {
+  background: #0B1829; border: 1px solid #1B3A5C; border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px; display: flex;
+  justify-content: space-between; align-items: center;
+}
+.admin-row-name { font-size: 14px; font-weight: 600; }
+.admin-row-sub  { font-size: 11px; color: #7A99B8; margin-top: 2px; }
+
 /* safe area */
 @supports(padding: max(0px)) {
   #bottom-nav { padding-bottom: max(env(safe-area-inset-bottom), 8px); height: auto; min-height: 64px; }
@@ -613,23 +636,46 @@ textarea { resize: none; line-height: 1.6; }
         </div>
 
         <!-- Visit selector -->
-        <div class="field">
+        <div class="field" id="insp-visit-select-wrap">
           <label class="label">رقم الزيارة <span class="req">*</span></label>
           <select id="insp-visit-select" onchange="onVisitSelect(this.value)">
             <option value="">— اختر زيارة —</option>
           </select>
+        </div>
+        <!-- locked visit display (shown after selection) -->
+        <div id="insp-visit-locked" style="display:none;margin-bottom:14px">
+          <label class="label">رقم الزيارة</label>
+          <div style="display:flex;align-items:center;gap:10px;background:#0B1829;border:1px solid #1B3A5C;border-radius:12px;padding:12px 14px">
+            <span style="flex:1;font-weight:700;color:#C8962A;font-size:14px" id="insp-visit-locked-num"></span>
+            <button class="btn btn-outline btn-sm" style="flex-shrink:0;padding:4px 10px;font-size:11px" onclick="unlockVisit()">تغيير</button>
+          </div>
         </div>
 
         <!-- Element type -->
         <div class="field">
           <label class="label">نوع العنصر <span class="req">*</span></label>
           <div class="type-grid" id="type-grid">
-            <div class="type-btn sel" data-val="column" onclick="selectType(this)"><div class="ico">🏛️</div>عمود</div>
-            <div class="type-btn" data-val="slab"   onclick="selectType(this)"><div class="ico">⬛</div>بلاطة</div>
-            <div class="type-btn" data-val="beam"   onclick="selectType(this)"><div class="ico">━</div>كمرة</div>
-            <div class="type-btn" data-val="finishing" onclick="selectType(this)"><div class="ico">🪟</div>تشطيب</div>
-            <div class="type-btn" data-val="crack"  onclick="selectType(this)"><div class="ico">⚡</div>شرخ</div>
-            <div class="type-btn" data-val="moisture" onclick="selectType(this)"><div class="ico">💧</div>رطوبة</div>
+            <div class="type-btn sel" data-val="column"    onclick="selectType(this)"><div class="ico">🏛️</div>عمود</div>
+            <div class="type-btn" data-val="slab"          onclick="selectType(this)"><div class="ico">⬛</div>بلاطة</div>
+            <div class="type-btn" data-val="beam"          onclick="selectType(this)"><div class="ico">━</div>كمرة</div>
+            <div class="type-btn" data-val="finishing"     onclick="selectType(this)"><div class="ico">🪟</div>تشطيب</div>
+            <div class="type-btn" data-val="crack"         onclick="selectType(this)"><div class="ico">⚡</div>شرخ</div>
+            <div class="type-btn" data-val="moisture"      onclick="selectType(this)"><div class="ico">💧</div>رطوبة</div>
+            <div class="type-btn" data-val="other"         onclick="selectType(this)" style="grid-column:span 2"><div class="ico">📋</div>أخرى (استلام)</div>
+          </div>
+        </div>
+        <!-- استلام sub-options — تظهر عند اختيار أخرى -->
+        <div id="other-types-wrap" style="display:none;margin-bottom:14px">
+          <label class="label">نوع الاستلام</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="type-btn" data-val="استلام_خنزيرة"  onclick="selectOtherType(this)">🧱 استلام خنزيرة</div>
+            <div class="type-btn" data-val="استلام_قواعد"   onclick="selectOtherType(this)">⬜ استلام قواعد</div>
+            <div class="type-btn" data-val="استلام_رقاب"    onclick="selectOtherType(this)">🔩 استلام رقاب</div>
+            <div class="type-btn" data-val="استلام_ميدة"    onclick="selectOtherType(this)">➖ استلام ميدة</div>
+            <div class="type-btn" data-val="استلام_اعمدة"   onclick="selectOtherType(this)">🏛️ استلام أعمدة</div>
+            <div class="type-btn" data-val="استلام_سقف"     onclick="selectOtherType(this)">🏠 استلام سقف</div>
+            <div class="type-btn" data-val="استلام_سلم"     onclick="selectOtherType(this)">🪜 استلام سلم</div>
+            <div class="type-btn" data-val="استلام_اعتاب"   onclick="selectOtherType(this)">🚪 استلام أعتاب</div>
           </div>
         </div>
 
@@ -702,11 +748,41 @@ textarea { resize: none; line-height: 1.6; }
       <div class="page-head">
         <div class="page-tag">مراجعة نتائج AI</div>
         <div class="page-title">الفحوصات المعلّقة</div>
+        <div id="review-visit-badge" style="text-align:center;margin-top:8px;display:none">
+          <span class="status-pill sp-new" id="review-visit-label"></span>
+        </div>
       </div>
-
+      <!-- بحث برقم جوال العميل -->
+      <div style="margin-bottom:14px">
+        <label class="label">بحث برقم جوال العميل</label>
+        <div style="display:flex;gap:8px">
+          <input type="tel" id="search-client-phone" placeholder="05XXXXXXXX" maxlength="10"
+            style="flex:1;background:#0B1829;border:1px solid #1B3A5C;border-radius:12px;padding:10px 14px;color:#E8EDF2;font-size:14px">
+          <button class="btn btn-outline btn-sm" onclick="searchVisitByPhone()" style="flex-shrink:0">بحث</button>
+        </div>
+        <div id="phone-search-results" style="margin-top:10px"></div>
+      </div>
       <div id="review-list">
         <!-- populated by JS -->
       </div>
+    </div>
+
+    <!-- ════ PAGE: ADMIN ════ -->
+    <div class="page" id="page-admin">
+      <div class="page-head">
+        <div class="page-tag">لوحة الإدارة</div>
+        <div class="page-title">مركز التحكم</div>
+      </div>
+      <!-- تبويبات -->
+      <div id="admin-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none">
+        <button class="admin-tab sel" onclick="adminTab(this,'supervision')">الإشراف</button>
+        <button class="admin-tab" onclick="adminTab(this,'clients')">العملاء</button>
+        <button class="admin-tab" onclick="adminTab(this,'contractors')">المقاولون</button>
+        <button class="admin-tab" onclick="adminTab(this,'areas')">المناطق</button>
+        <button class="admin-tab" onclick="adminTab(this,'dates')">التواريخ</button>
+        <button class="admin-tab" onclick="adminTab(this,'payments')">المالية</button>
+      </div>
+      <div id="admin-content"><!-- populated by JS --></div>
     </div>
 
     <!-- ════ PAGE: REPORTS ════ -->
@@ -739,6 +815,10 @@ textarea { resize: none; line-height: 1.6; }
     <button class="nav-item" onclick="navTo('reports',this)" id="nav-reports">
       <span class="nav-icon">📄</span>
       <span>التقارير</span>
+    </button>
+    <button class="nav-item" onclick="navTo('admin',this)" id="nav-admin" style="display:none">
+      <span class="nav-icon">⚙️</span>
+      <span>الإدارة</span>
     </button>
   </nav>
 
@@ -808,10 +888,10 @@ function navTo(page, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   if (btn) btn.classList.add('active');
-  // load data
   if (page === 'review')  loadReview();
   if (page === 'reports') loadReports();
   if (page === 'inspect') loadVisitOptions();
+  if (page === 'admin')   loadAdmin();
 }
 
 // ─── LOGIN ───────────────────────────────
@@ -887,17 +967,20 @@ async function doLogin() {
 }
 
 function onLoginSuccess() {
+  // منع الرجوع للصفحة السابقة عبر المتصفح
+  history.pushState(null, '', window.location.href);
+  window.onpopstate = () => history.pushState(null, '', window.location.href);
+
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-pill').style.display = 'flex';
   document.getElementById('logout-btn').style.display = 'block';
   document.getElementById('user-name-display').textContent = STATE.user.name;
 
   if (STATE.user.role === 'engineer') {
-    // show engineer nav items
     document.getElementById('nav-inspect').style.display = 'flex';
     document.getElementById('nav-review').style.display  = 'flex';
+    document.getElementById('nav-admin').style.display   = 'flex';
     document.getElementById('nav-home-label').textContent = 'الرئيسية';
-    // change home page to engineer dashboard
     showEngineerHome();
   }
   toast('أهلًا ' + STATE.user.name + ' 👋', 'success');
@@ -1174,7 +1257,21 @@ function removeInspPhoto(i) {
 
 // ─── TYPE SELECTOR ───────────────────────
 function selectType(el) {
-  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('sel'));
+  document.querySelectorAll('#type-grid .type-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  STATE.selectedType = el.dataset.val;
+  const wrap = document.getElementById('other-types-wrap');
+  if (el.dataset.val === 'other') {
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+    // مسح اختيار الاستلام
+    document.querySelectorAll('#other-types-wrap .type-btn').forEach(b => b.classList.remove('sel'));
+  }
+}
+
+function selectOtherType(el) {
+  document.querySelectorAll('#other-types-wrap .type-btn').forEach(b => b.classList.remove('sel'));
   el.classList.add('sel');
   STATE.selectedType = el.dataset.val;
 }
@@ -1209,7 +1306,22 @@ function onVisitSelect(val) {
   const opt = document.querySelector(`#insp-visit-select option[value="${val}"]`);
   const num = opt ? opt.dataset.num : val;
   STATE.currentVisitId = val;
+  STATE.currentVisitNum = num;
   document.getElementById('inspect-visit-badge').textContent = '🔗 ' + num;
+  document.getElementById('inspect-visit-badge').className = 'status-pill sp-new';
+  // إخفاء dropdown وإظهار رقم الزيارة ثابت
+  document.getElementById('insp-visit-select-wrap').style.display = 'none';
+  document.getElementById('insp-visit-locked-num').textContent = num;
+  document.getElementById('insp-visit-locked').style.display = 'block';
+}
+
+function unlockVisit() {
+  STATE.currentVisitId = null;
+  STATE.currentVisitNum = null;
+  document.getElementById('insp-visit-locked').style.display = 'none';
+  document.getElementById('insp-visit-select-wrap').style.display = 'block';
+  document.getElementById('insp-visit-select').value = '';
+  document.getElementById('inspect-visit-badge').textContent = '🔗 اختر زيارة أولاً';
   document.getElementById('inspect-visit-badge').className = 'status-pill sp-new';
 }
 
@@ -1297,15 +1409,19 @@ async function submitInspection() {
 function resetInspForm() {
   STATE.inspPhotos = [];
   STATE.currentVisitId = null;
+  STATE.currentVisitNum = null;
   STATE.urgentOn = false;
   document.getElementById('inspect-form-wrap').style.display = 'block';
   document.getElementById('insp-processing').style.display   = 'none';
   document.getElementById('insp-visit-select').value = '';
+  document.getElementById('insp-visit-locked').style.display = 'none';
+  document.getElementById('insp-visit-select-wrap').style.display = 'block';
   document.getElementById('insp-ref').value   = '';
   document.getElementById('insp-loc').value   = '';
   document.getElementById('insp-notes').value = '';
   document.getElementById('urgent-toggle').classList.remove('on');
   document.getElementById('inspect-visit-badge').textContent = '🔗 اختر زيارة أولاً';
+  document.getElementById('other-types-wrap').style.display = 'none';
   renderInspPhotos();
 }
 
@@ -1314,9 +1430,22 @@ async function loadReview() {
   const el = document.getElementById('review-list');
   el.innerHTML = '<div class="centered text-muted" style="padding:30px">جارٍ التحميل...</div>';
 
+  // إظهار badge الزيارة الحالية للمهندس
+  const badge = document.getElementById('review-visit-badge');
+  const badgeLabel = document.getElementById('review-visit-label');
+  if (STATE.user?.role === 'engineer' && STATE.currentVisitNum) {
+    badge.style.display = 'block';
+    badgeLabel.textContent = '🔗 ' + STATE.currentVisitNum;
+  } else {
+    badge.style.display = 'none';
+  }
+
   try {
     let reviewQuery = 'review_status=eq.pending_review&order=created_at.desc&limit=20';
-    if (STATE.user?.role === 'client' && STATE.user?.id) {
+    if (STATE.user?.role === 'engineer' && STATE.currentVisitId) {
+      // المهندس: يرى فقط فحوصات الزيارة المحددة
+      reviewQuery = `review_status=eq.pending_review&visit_id=eq.${STATE.currentVisitId}&order=created_at.desc`;
+    } else if (STATE.user?.role === 'client' && STATE.user?.id) {
       const clientVisits = await dbGet('visits', `client_id=eq.${STATE.user.id}&select=id`);
       if (!clientVisits || clientVisits.length === 0) { el.innerHTML = demoReviewHTML(); return; }
       const visitIds = clientVisits.map(v => v.id).join(',');
@@ -1528,6 +1657,50 @@ function demoReportsHTML() {
   `;
 }
 
+async function searchVisitByPhone() {
+  const phone = document.getElementById('search-client-phone').value.trim();
+  if (!phone || phone.length < 9) { toast('أدخل رقم الجوال', 'error'); return; }
+  const res = document.getElementById('phone-search-results');
+  res.innerHTML = '<div class="text-muted text-sm" style="padding:8px">جارٍ البحث...</div>';
+  try {
+    const clients = await dbGet('clients', `phone_hash=eq.${phone}&select=id,name`);
+    if (!clients || clients.length === 0) {
+      res.innerHTML = '<div class="text-muted text-sm" style="padding:8px">لا يوجد عميل بهذا الرقم</div>';
+      return;
+    }
+    const cl = clients[0];
+    const visits = await dbGet('visits', `client_id=eq.${cl.id}&order=created_at.desc&limit=10`);
+    if (!visits || visits.length === 0) {
+      res.innerHTML = `<div class="text-muted text-sm" style="padding:8px">لا توجد زيارات للعميل ${cl.name}</div>`;
+      return;
+    }
+    res.innerHTML = visits.map(v => `
+      <div class="visit-card" style="cursor:pointer" onclick="selectVisitFromSearch('${v.id}','${v.visit_number}')">
+        <div class="vc-top">
+          <div class="vc-num">${v.visit_number}</div>
+          <span class="status-pill sp-${v.status}">${statusLabel(v.status)}</span>
+        </div>
+        <div class="vc-client">${cl.name} — ${v.city || '—'}</div>
+        <div class="vc-meta">${formatDate(v.created_at)}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    res.innerHTML = '<div class="text-muted text-sm" style="padding:8px">خطأ في البحث</div>';
+  }
+}
+
+function selectVisitFromSearch(visitId, visitNum) {
+  STATE.currentVisitId = visitId;
+  STATE.currentVisitNum = visitNum;
+  document.getElementById('phone-search-results').innerHTML = '';
+  document.getElementById('search-client-phone').value = '';
+  const badgeLabel = document.getElementById('review-visit-label');
+  badgeLabel.textContent = '🔗 ' + visitNum;
+  document.getElementById('review-visit-badge').style.display = 'block';
+  toast('تم تحديد الزيارة: ' + visitNum, 'success');
+  loadReview();
+}
+
 function downloadReport(visitId) {
   toast('جارٍ تحضير التقرير...', '');
 }
@@ -1541,6 +1714,145 @@ async function sendReportInApp(visitId) {
   } catch(e) {
     toast('تم الإرسال (تجريبي) ✅', 'success');
   }
+}
+
+// ─── ADMIN PAGE ──────────────────────────
+let currentAdminTab = 'supervision';
+
+function adminTab(btn, tab) {
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  currentAdminTab = tab;
+  renderAdminTab(tab);
+}
+
+async function loadAdmin() {
+  renderAdminTab(currentAdminTab);
+}
+
+async function renderAdminTab(tab) {
+  const el = document.getElementById('admin-content');
+  el.innerHTML = '<div class="centered text-muted" style="padding:30px">جارٍ التحميل...</div>';
+  try {
+    if (tab === 'supervision') await renderAdminSupervision(el);
+    else if (tab === 'clients') await renderAdminClients(el);
+    else if (tab === 'contractors') await renderAdminContractors(el);
+    else if (tab === 'areas') await renderAdminAreas(el);
+    else if (tab === 'dates') await renderAdminDates(el);
+    else if (tab === 'payments') await renderAdminPayments(el);
+  } catch(e) {
+    el.innerHTML = '<div class="centered text-muted" style="padding:20px">خطأ في التحميل</div>';
+  }
+}
+
+async function renderAdminSupervision(el) {
+  const [allVisits, pending, completed] = await Promise.all([
+    dbGet('visits', 'select=id,status&limit=200'),
+    dbGet('visits', 'status=in.(new,scheduled,in_progress,pending_review)&select=id,status&limit=200'),
+    dbGet('visits', 'status=eq.completed&select=id&limit=200'),
+  ]);
+  const total   = allVisits?.length || 0;
+  const nPend   = pending?.length   || 0;
+  const nDone   = completed?.length || 0;
+  el.innerHTML = `
+    <div class="admin-kpi-grid">
+      <div class="kpi-box"><div class="kpi-n">${total}</div><div class="kpi-lbl">إجمالي الطلبات</div></div>
+      <div class="kpi-box"><div class="kpi-n" style="color:#FCD34D">${nPend}</div><div class="kpi-lbl">طلبات معلّقة</div></div>
+      <div class="kpi-box"><div class="kpi-n" style="color:#4ADE80">${nDone}</div><div class="kpi-lbl">طلبات منتهية</div></div>
+      <div class="kpi-box"><div class="kpi-n" style="color:#FF6B6B">${total - nPend - nDone}</div><div class="kpi-lbl">ملغاة / أخرى</div></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#90CAF9">الطلبات المعلّقة</div>
+    ${(pending || []).slice(0,10).map(v=>`
+      <div class="admin-row">
+        <div><div class="admin-row-name">${v.visit_number || v.id}</div>
+        <div class="admin-row-sub">${statusLabel(v.status)}</div></div>
+        <span class="status-pill sp-${v.status}">${statusLabel(v.status)}</span>
+      </div>`).join('') || '<div class="text-muted text-sm">لا توجد طلبات معلّقة</div>'}
+  `;
+}
+
+async function renderAdminClients(el) {
+  const clients = await dbGet('clients', 'order=created_at.desc&limit=50');
+  el.innerHTML = `
+    <div class="admin-kpi-grid" style="grid-template-columns:1fr">
+      <div class="kpi-box"><div class="kpi-n">${clients?.length || 0}</div><div class="kpi-lbl">إجمالي العملاء</div></div>
+    </div>
+    ${(clients || []).map(c=>`
+      <div class="admin-row">
+        <div>
+          <div class="admin-row-name">${c.name || 'بدون اسم'}</div>
+          <div class="admin-row-sub">****${c.phone_last4 || '----'} — ${c.city || '—'}</div>
+        </div>
+        <div style="font-size:11px;color:#4A6A8A">${formatDate(c.created_at)}</div>
+      </div>`).join('') || '<div class="text-muted text-sm">لا يوجد عملاء</div>'}
+  `;
+}
+
+async function renderAdminContractors(el) {
+  el.innerHTML = `
+    <div class="admin-kpi-grid" style="grid-template-columns:1fr">
+      <div class="kpi-box"><div class="kpi-n" style="color:#90CAF9">—</div><div class="kpi-lbl">المقاولون المسجلون</div></div>
+    </div>
+    <div class="empty-state">
+      <div class="empty-icon">🏗️</div>
+      <div class="empty-title">قيد التطوير</div>
+      <div class="empty-sub">سيتم إضافة قائمة المقاولين قريباً</div>
+    </div>`;
+}
+
+async function renderAdminAreas(el) {
+  const visits = await dbGet('visits', 'select=city&limit=200');
+  const counts = {};
+  (visits || []).forEach(v => { if (v.city) counts[v.city] = (counts[v.city]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#90CAF9">توزيع الزيارات حسب المنطقة</div>
+    ${sorted.map(([city,cnt])=>`
+      <div class="admin-row">
+        <div class="admin-row-name">📍 ${city}</div>
+        <div class="kpi-n" style="font-size:18px">${cnt}</div>
+      </div>`).join('') || '<div class="text-muted text-sm">لا توجد بيانات</div>'}
+  `;
+}
+
+async function renderAdminDates(el) {
+  const visits = await dbGet('visits', 'select=preferred_date,status,visit_number&order=preferred_date.asc&limit=50');
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#90CAF9">الزيارات القادمة</div>
+    ${(visits || []).filter(v=>v.preferred_date).map(v=>`
+      <div class="admin-row">
+        <div>
+          <div class="admin-row-name">${v.visit_number || v.id}</div>
+          <div class="admin-row-sub">${v.preferred_date}</div>
+        </div>
+        <span class="status-pill sp-${v.status}">${statusLabel(v.status)}</span>
+      </div>`).join('') || '<div class="text-muted text-sm">لا توجد مواعيد</div>'}
+  `;
+}
+
+async function renderAdminPayments(el) {
+  const visits = await dbGet('visits', 'select=id,visit_number,status,city,property_type,created_at&order=created_at.desc&limit=100');
+  const all = visits || [];
+  const completed  = all.filter(v => v.status === 'completed');
+  const pending    = all.filter(v => !['completed','cancelled'].includes(v.status));
+  const cancelled  = all.filter(v => v.status === 'cancelled');
+  el.innerHTML = `
+    <div class="admin-kpi-grid">
+      <div class="kpi-box"><div class="kpi-n" style="color:#4ADE80">${completed.length}</div><div class="kpi-lbl">منتهية (مسددة)</div></div>
+      <div class="kpi-box"><div class="kpi-n" style="color:#FCD34D">${pending.length}</div><div class="kpi-lbl">معلّقة (غير مسددة)</div></div>
+      <div class="kpi-box"><div class="kpi-n" style="color:#FF6B6B">${cancelled.length}</div><div class="kpi-lbl">ملغاة</div></div>
+      <div class="kpi-box"><div class="kpi-n">${all.length}</div><div class="kpi-lbl">الإجمالي</div></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#FCD34D">الغير مسددة</div>
+    ${pending.slice(0,10).map(v=>`
+      <div class="admin-row">
+        <div>
+          <div class="admin-row-name">${v.visit_number}</div>
+          <div class="admin-row-sub">${v.city||'—'} — ${v.property_type||'—'}</div>
+        </div>
+        <span class="status-pill sp-${v.status}">${statusLabel(v.status)}</span>
+      </div>`).join('') || '<div class="text-muted text-sm">لا توجد طلبات معلّقة</div>'}
+  `;
 }
 
 // ─── HELPERS ─────────────────────────────
