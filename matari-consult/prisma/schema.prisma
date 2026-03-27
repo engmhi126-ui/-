@@ -1,0 +1,284 @@
+// Al Matari Consult - Arabic Accounting System
+// Prisma Schema - PostgreSQL
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  ENGINEER
+  VIEWER
+}
+
+enum PaymentMethod {
+  CASH
+  NETWORK
+  BANK_TRANSFER
+}
+
+enum ServiceType {
+  CIVIL
+  ARCHITECTURAL
+  SURVEY
+  OTHER
+}
+
+enum VoucherStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
+enum ReminderStatus {
+  NOT_SENT
+  SENT
+  RESPONDED
+  PAID
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  CREATE_VOUCHER
+  EDIT_VOUCHER
+  DELETE_VOUCHER
+  CREATE_CUSTOMER
+  EDIT_CUSTOMER
+  DELETE_CUSTOMER
+  SEND_REMINDER
+  AI_QUERY
+  TELEGRAM_QUERY
+  CREATE_USER
+  EDIT_USER
+}
+
+// ─────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  username      String    @unique
+  email         String?   @unique
+  passwordHash  String
+  role          UserRole  @default(ENGINEER)
+  avatar        String?
+  phone         String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  vouchers      Voucher[]
+  auditLogs     AuditLog[]
+  remindersSent ReminderLog[]
+  aiQueries     AiQueryLog[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// CUSTOMERS
+// ─────────────────────────────────────────
+
+model Customer {
+  id          String    @id @default(cuid())
+  name        String
+  nationalId  String?   @unique
+  phone       String
+  email       String?
+  district    String?
+  city        String?
+  notes       String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  vouchers    Voucher[]
+  reminders   ReminderLog[]
+
+  @@index([phone])
+  @@index([nationalId])
+  @@map("customers")
+}
+
+// ─────────────────────────────────────────
+// VOUCHERS (سندات القبض)
+// ─────────────────────────────────────────
+
+model Voucher {
+  id              String        @id @default(cuid())
+  voucherNumber   String        @unique
+  date            DateTime      @default(now())
+
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  customerName    String
+  nationalId      String?
+  phone           String
+  district        String?
+
+  totalAmount     Decimal       @db.Decimal(12, 2)
+  paidAmount      Decimal       @db.Decimal(12, 2)
+  remainingAmount Decimal       @db.Decimal(12, 2)
+  amountInWords   String?
+
+  paymentMethod   PaymentMethod @default(CASH)
+  bankName        String?
+  chequeNumber    String?
+
+  serviceType     ServiceType   @default(CIVIL)
+  serviceOther    String?
+  description     String?
+
+  engineerId      String
+  engineer        User          @relation(fields: [engineerId], references: [id])
+  engineerName    String
+  accountantName  String?
+  managementName  String?
+
+  status          VoucherStatus @default(ISSUED)
+  notes           String?
+  attachments     String[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  reminders       ReminderLog[]
+
+  @@index([customerId])
+  @@index([engineerId])
+  @@index([date])
+  @@index([voucherNumber])
+  @@map("vouchers")
+}
+
+// ─────────────────────────────────────────
+// VOUCHER SEQUENCE
+// ─────────────────────────────────────────
+
+model VoucherSequence {
+  id        Int      @id @default(autoincrement())
+  yearMonth String   @unique
+  lastSeq   Int      @default(0)
+
+  @@map("voucher_sequences")
+}
+
+// ─────────────────────────────────────────
+// REMINDER LOGS
+// ─────────────────────────────────────────
+
+model ReminderLog {
+  id          String         @id @default(cuid())
+  customerId  String
+  customer    Customer       @relation(fields: [customerId], references: [id])
+  voucherId   String?
+  voucher     Voucher?       @relation(fields: [voucherId], references: [id])
+  sentById    String
+  sentBy      User           @relation(fields: [sentById], references: [id])
+  channel     String         @default("whatsapp")
+  message     String
+  status      ReminderStatus @default(NOT_SENT)
+  sentAt      DateTime?
+  respondedAt DateTime?
+  paidAt      DateTime?
+  notes       String?
+  createdAt   DateTime       @default(now())
+
+  @@map("reminder_logs")
+}
+
+// ─────────────────────────────────────────
+// AUDIT LOGS
+// ─────────────────────────────────────────
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  action     AuditAction
+  entityType String?
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────
+// AI QUERY LOGS
+// ─────────────────────────────────────────
+
+model AiQueryLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  query     String
+  response  String
+  model     String?
+  tokens    Int?
+  createdAt DateTime @default(now())
+
+  @@map("ai_query_logs")
+}
+
+// ─────────────────────────────────────────
+// TELEGRAM SETTINGS
+// ─────────────────────────────────────────
+
+model TelegramSettings {
+  id                   Int      @id @default(autoincrement())
+  botToken             String
+  adminChatId          String?
+  notifyNewVoucher     Boolean  @default(true)
+  notifyHighBalance    Boolean  @default(true)
+  highBalanceThreshold Decimal  @default(10000) @db.Decimal(12, 2)
+  dailySummaryEnabled  Boolean  @default(false)
+  dailySummaryTime     String   @default("08:00")
+  isActive             Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("telegram_settings")
+}
+
+// ─────────────────────────────────────────
+// OFFICE SETTINGS
+// ─────────────────────────────────────────
+
+model OfficeSettings {
+  id          Int      @id @default(autoincrement())
+  officeName  String   @default("مكتب المطري للاستشارات الهندسية")
+  phone       String?
+  phone2      String?
+  email       String?
+  address     String?
+  city        String?
+  logoUrl     String?
+  website     String?
+  vatNumber   String?
+  crNumber    String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("office_settings")
+}

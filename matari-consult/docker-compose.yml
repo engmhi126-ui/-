@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: matari_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: matari_consult
+      POSTGRES_USER: matari
+      POSTGRES_PASSWORD: matari_secret_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U matari -d matari_consult"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: matari_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://matari:matari_secret_2024@postgres:5432/matari_consult
+      - SESSION_SECRET=change-this-to-a-secure-random-string-in-production
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "npx prisma migrate deploy && npx prisma db seed && npm start"
+
+volumes:
+  postgres_data:
