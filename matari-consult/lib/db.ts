@@ -1,18 +1,25 @@
 import { PrismaClient } from "@/app/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    // Allow build-time initialization without a real DB
-    const adapter = new PrismaPg({ connectionString: "postgresql://placeholder:placeholder@localhost:5432/placeholder" });
-    return new PrismaClient({ adapter });
-  }
-  const adapter = new PrismaPg({ connectionString });
+  const connectionString = process.env.DATABASE_URL ||
+    "postgresql://placeholder:placeholder@localhost:5432/placeholder";
+
+  // Supabase requires SSL
+  const isSupabase = connectionString.includes("supabase.co") ||
+    connectionString.includes("supabase.com");
+
+  const pool = new Pool({
+    connectionString,
+    ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
+  });
+
+  const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
 

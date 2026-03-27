@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/dal";
 import { prisma } from "@/lib/db";
 import { generateVoucherNumber } from "@/lib/voucher-number";
 import { amountToArabicWords } from "@/lib/amount-to-words";
+import { notifyN8n } from "@/lib/n8n";
 import { AuditAction } from "@/app/generated/prisma";
 import { z } from "zod";
 
@@ -148,6 +149,17 @@ export async function POST(request: NextRequest) {
 
     // Telegram notification
     void notifyTelegramNewVoucher(voucher.voucherNumber, customer.name, data.paidAmount);
+
+    // n8n notification
+    void notifyN8n("new_voucher", {
+      voucherNumber: voucher.voucherNumber,
+      customerName: customer.name,
+      paidAmount: data.paidAmount,
+      totalAmount: data.totalAmount,
+      remainingAmount,
+      serviceType: data.serviceType,
+      engineerName: engineer.name,
+    });
 
     return Response.json(voucher, { status: 201 });
   } catch (error) {
